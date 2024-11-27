@@ -47,7 +47,7 @@ app.post('/predict', async (req, res) => {
     // }, 5000);
 
     pyshell.on('message', (message) => {
-      clearTimeout(timeout);
+      // clearTimeout(timeout);
       
       const elapsedTime = process.hrtime(startTime);
       const duration = (elapsedTime[0] * 1e9 + elapsedTime[1]) / 1e6;
