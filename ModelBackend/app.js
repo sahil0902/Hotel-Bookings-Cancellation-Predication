@@ -8,7 +8,14 @@ const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+// Configure CORS
+const corsOptions = {
+  origin: 'https://hotel-bookings-cancellation-predication-1.onrender.com',
+  methods: 'GET,POST',
+  allowedHeaders: 'Content-Type,Authorization',
+};
+app.use(cors(corsOptions));
+
 
 // Pre-load the Python interpreter and model
 const pythonExecutable = 'python3';
