@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(cors());
 
 // Pre-load the Python interpreter and model
-const pythonExecutable = path.resolve(__dirname, 'venv', 'bin', 'python3');
+const pythonExecutable = '/opt/render/project/.venv/bin/python';
 const scriptPath = path.resolve(__dirname);
 
 // Configure PythonShell options once

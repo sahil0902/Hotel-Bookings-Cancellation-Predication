@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: my-web-service
+    env: node
+    buildCommand: npm install && pip install -r requirements.txt
+    startCommand: node app.js
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.8
+      - key: PYTHON_PATH
+        value: /opt/render/project/.venv/bin/python
