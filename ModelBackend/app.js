@@ -34,10 +34,10 @@ app.post('/predict', async (req, res) => {
       args: [JSON.stringify(inputData)],
     });
 
-    const timeout = setTimeout(() => {
-      pyshell.terminate();
-      res.status(408).json({ error: 'Prediction timeout', message: 'The prediction process took too long and was terminated.' });
-    }, 5000);
+    // const timeout = setTimeout(() => {
+    //   pyshell.terminate();
+    //   res.status(408).json({ error: 'Prediction timeout', message: 'The prediction process took too long and was terminated.' });
+    // }, 5000);
 
     pyshell.on('message', (message) => {
       clearTimeout(timeout);
