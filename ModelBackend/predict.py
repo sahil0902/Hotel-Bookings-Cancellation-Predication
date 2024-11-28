@@ -6,6 +6,7 @@ import json
 import logging
 from typing import Dict, Any
 import shap
+import matplotlib.pyplot as plt
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -43,18 +44,23 @@ def preprocess_input(data: Dict[str, Any]) -> pd.DataFrame:
     for feature in numerical_features:
         if feature not in df.columns:
             df[feature] = 0
-            
-    # One-hot encode categorical variables
+    
+    # List of categorical features to be one-hot encoded
     categorical_features = ['country', 'distribution_channel', 'deposit_type']
+    
+    # Perform one-hot encoding on categorical variables
     df_encoded = pd.get_dummies(df, columns=categorical_features, prefix=categorical_features)
     
-    # Add missing one-hot encoded columns and ensure they are in FEATURE_NAMES
+    # Identify missing one-hot encoded columns based on FEATURE_NAMES
+    # and add them with default value 0
     for feature in FEATURE_NAMES:
         if feature not in df_encoded.columns:
             df_encoded[feature] = 0
-            
+    
     # Ensure correct column order
-    return df_encoded[FEATURE_NAMES]
+    df_final = df_encoded[FEATURE_NAMES]
+    
+    return df_final
 
 def get_shap_values(df: pd.DataFrame) -> Dict[str, float]:
     """Get SHAP values for the input data"""
