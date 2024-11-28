@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import { Loader2, Hotel } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   BarChart,
   Bar,
