@@ -1,4 +1,3 @@
-# predict.py
 import pandas as pd
 import numpy as np
 import joblib
@@ -6,6 +5,7 @@ import sys
 import json
 import logging
 from typing import Dict, Any
+import shap
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -19,6 +19,11 @@ try:
     logging.info("Loading feature names from feature_names.pkl")
     FEATURE_NAMES = joblib.load("feature_names.pkl")
     logging.info("Feature names loaded successfully.")
+
+    # Initialize SHAP TreeExplainer
+    logging.info("Initializing SHAP TreeExplainer.")
+    explainer = shap.TreeExplainer(MODEL)
+    logging.info("SHAP Explainer initialized.")
 
 except Exception as e:
     logging.error(f"Failed to load model or feature names: {e}")
@@ -43,7 +48,7 @@ def preprocess_input(data: Dict[str, Any]) -> pd.DataFrame:
     categorical_features = ['country', 'distribution_channel', 'deposit_type']
     df_encoded = pd.get_dummies(df, columns=categorical_features, prefix=categorical_features)
     
-    # Add missing one-hot encoded columns
+    # Add missing one-hot encoded columns and ensure they are in FEATURE_NAMES
     for feature in FEATURE_NAMES:
         if feature not in df_encoded.columns:
             df_encoded[feature] = 0
@@ -51,12 +56,12 @@ def preprocess_input(data: Dict[str, Any]) -> pd.DataFrame:
     # Ensure correct column order
     return df_encoded[FEATURE_NAMES]
 
-def get_feature_importance() -> Dict[str, float]:
-    """Get feature importance scores from the model"""
-    if hasattr(MODEL, 'feature_importances_'):
-        importance_dict = dict(zip(FEATURE_NAMES, MODEL.feature_importances_))
-        return {k: float(v) for k, v in importance_dict.items()}
-    return {}
+def get_shap_values(df: pd.DataFrame) -> Dict[str, float]:
+    """Get SHAP values for the input data"""
+    shap_values = explainer.shap_values(df)
+    # Assuming binary classification, shap_values[1] corresponds to the positive class
+    shap_dict = dict(zip(FEATURE_NAMES, shap_values[1][0]))
+    return shap_dict
 
 def predict(input_data: Dict[str, Any]) -> Dict[str, Any]:
     try:
@@ -72,15 +77,15 @@ def predict(input_data: Dict[str, Any]) -> Dict[str, Any]:
         cancel_probability = float(probabilities[1])
         not_cancel_probability = float(probabilities[0])
         
-        # Get feature importance
-        feature_importance = get_feature_importance()
+        # Get SHAP feature importance
+        shap_values_dict = get_shap_values(df)
         
         # Prepare detailed response
         result = {
             "prediction": prediction,
             "cancel_probability": cancel_probability,
             "not_cancel_probability": not_cancel_probability,
-            "feature_importance": feature_importance,
+            "feature_importance": shap_values_dict,
             "input_features": {
                 "numerical": {k: float(v) for k, v in input_data.items() if isinstance(v, (int, float))},
                 "categorical": {k: v for k, v in input_data.items() if isinstance(v, str)}
