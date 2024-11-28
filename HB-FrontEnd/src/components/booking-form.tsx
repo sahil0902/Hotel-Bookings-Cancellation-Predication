@@ -60,7 +60,12 @@ const depositOptions = [
   { value: 'Refundable', label: 'Refundable' },
 ];
 
-const FeatureImportance = ({ featureImportance }: { featureImportance: Record<string, number> | undefined }) => {
+
+interface FeatureImportanceProps {
+  featureImportance: Record<string, number> | undefined;
+}
+
+const FeatureImportance = ({ featureImportance }: FeatureImportanceProps) => {
   if (!featureImportance || Object.keys(featureImportance).length === 0) {
     return null;
   }
@@ -69,77 +74,50 @@ const FeatureImportance = ({ featureImportance }: { featureImportance: Record<st
   const chartData = Object.entries(featureImportance)
     .map(([key, value]) => ({
       feature: key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim(),
-      importance: parseFloat((value * 100).toFixed(2)),
+      importance: parseFloat((value).toFixed(4)),
     }))
-    .sort((a, b) => b.importance - a.importance)
+    .sort((a, b) => Math.abs(b.importance) - Math.abs(a.importance))
     .slice(0, 10); // Display top 10 factors
-
-  // State to handle responsive dimensions
-  const [chartHeight, setChartHeight] = useState(350);
-  const [chartMargin, setChartMargin] = useState({ top: 40, right: 50, left: 150, bottom: 40 });
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 640) { // Small screens
-        setChartHeight(250);
-        setChartMargin({ top: 30, right: 30, left: 120, bottom: 30 });
-      } else if (window.innerWidth < 1024) { // Medium screens
-        setChartHeight(300);
-        setChartMargin({ top: 35, right: 40, left: 130, bottom: 35 });
-      } else { // Large screens
-        setChartHeight(350);
-        setChartMargin({ top: 40, right: 50, left: 150, bottom: 40 });
-      }
-    };
-
-    // Initial check
-    handleResize();
-
-    // Add event listener
-    window.addEventListener('resize', handleResize);
-
-    // Cleanup
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   return (
     <div className="bg-gray-50 p-4 md:p-6 rounded-lg border border-gray-200 shadow-md">
       <h3 className="text-lg md:text-xl font-semibold mb-4 text-center">Key Influencing Factors</h3>
-      <ResponsiveContainer width="100%" height={chartHeight}>
+      <ResponsiveContainer width="100%" height={350}>
         <BarChart
           data={chartData}
           layout="vertical"
-          margin={chartMargin}
+          margin={{ top: 20, right: 30, left: 150, bottom: 20 }}
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             type="number"
-            domain={[0, 'dataMax + 10']}
-            tickFormatter={(value) => `${value}%`}
+            domain={['dataMin', 'dataMax']}
+            tickFormatter={(value) => `${(value * 100).toFixed(2)}%`}
             stroke="#4F46E5"
-            fontSize={window.innerWidth < 640 ? 12 : 14}
+            fontSize={14}
           />
           <YAxis
             type="category"
             dataKey="feature"
-            width={window.innerWidth < 640 ? 120 : 150}
-            tick={{ fontSize: window.innerWidth < 640 ? 12 : 14 }}
+            width={150}
+            tick={{ fontSize: 14 }}
           />
           <Tooltip 
-            formatter={(value: number) => `${value}%`} 
+            formatter={(value: number) => `${(value * 100).toFixed(2)}%`} 
             contentStyle={{ backgroundColor: '#f9fafb', borderRadius: '8px', border: '1px solid #e5e7eb' }}
           />
           <Bar
             dataKey="importance"
             fill="#4F46E5"
             animationDuration={1500}
-            barSize={window.innerWidth < 640 ? 15 : 20}
+            barSize={20}
           />
         </BarChart>
       </ResponsiveContainer>
     </div>
   );
 };
+
 
 export function BookingForm() {
   const { toast } = useToast();
@@ -232,21 +210,6 @@ export function BookingForm() {
                   type="number"
                   step="0.01"
                 />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormInput
-                    form={form}
-                    name="previous_cancellations"
-                    label="Previous Cancellations"
-                    type="number"
-                  />
-                  <FormInput
-                    form={form}
-                    name="previous_bookings_not_canceled"
-                    label="Previous Not Canceled"
-                    type="number"
-                  />
-                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Dropdowns */}
                   <FormSelect
