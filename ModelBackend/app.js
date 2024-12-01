@@ -10,7 +10,7 @@ const app = express();
 app.use(express.json());
 // Configure CORS
 const corsOptions = {
-  origin: 'https://hotel-bookings-cancellation-predication-1.onrender.com',
+  origin: ['https://hotel-bookings-cancellation-predication-1.onrender.com', 'http://localhost:5173'],
   methods: 'GET,POST',
   allowedHeaders: 'Content-Type,Authorization',
 };

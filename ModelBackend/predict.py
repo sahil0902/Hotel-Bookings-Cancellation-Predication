@@ -62,15 +62,112 @@ def preprocess_input(data: Dict[str, Any]) -> pd.DataFrame:
     
     return df_final
 
-def get_shap_values(df: pd.DataFrame) -> Dict[str, float]:
-    """Get SHAP values for the input data"""
+def get_shap_values(df: pd.DataFrame, original_input: Dict[str, Any]) -> Dict[str, float]:
+    """Get SHAP values for the input data and aggregate them to original features,
+    excluding features with zero input values."""
     shap_values = explainer.shap_values(df)
-    # Assuming binary classification, shap_values[1] corresponds to the positive class
-    shap_dict = dict(zip(FEATURE_NAMES, shap_values[1][0]))
-    return shap_dict
+    shap_values_dict = dict(zip(FEATURE_NAMES, shap_values[1][0]))
+    
+    # Define categorical features and their one-hot encoded columns
+    categorical_features = {
+        'country': [col for col in FEATURE_NAMES if col.startswith('country_')],
+        'distribution_channel': [col for col in FEATURE_NAMES if col.startswith('distribution_channel_')],
+        'deposit_type': [col for col in FEATURE_NAMES if col.startswith('deposit_type_')]
+    }
 
+    # Aggregate SHAP values
+    aggregated_shap_values = {}
+
+    # For numerical features, include only if input value is non-zero
+    numerical_features_list = ['lead_time', 'stays_in_weekend_nights', 'stays_in_week_nights',
+                               'adults', 'children', 'babies', 'adr',
+                               'previous_cancellations', 'previous_bookings_not_canceled']
+    for feature in numerical_features_list:
+        input_value = original_input.get(feature, 0)
+        if input_value != 0:
+            shap_value = shap_values_dict.get(feature, 0)
+            aggregated_shap_values[feature] = shap_value
+
+    # For categorical features, always include them
+    for feature, columns in categorical_features.items():
+        shap_sum = sum([shap_values_dict.get(col, 0) for col in columns])
+        aggregated_shap_values[feature] = shap_sum
+
+    # Optionally, filter out features with zero SHAP values
+    filtered_shap_values = {k: v for k, v in aggregated_shap_values.items() if v != 0}
+
+    return filtered_shap_values
+    """Get SHAP values for the input data and aggregate them to original features."""
+    shap_values = explainer.shap_values(df)
+    shap_values_dict = dict(zip(FEATURE_NAMES, shap_values[1][0]))
+    
+    # Define your categorical features and their one-hot encoded columns
+    categorical_features = {
+        'country': [col for col in FEATURE_NAMES if col.startswith('country_')],
+        'distribution_channel': [col for col in FEATURE_NAMES if col.startswith('distribution_channel_')],
+        'deposit_type': [col for col in FEATURE_NAMES if col.startswith('deposit_type_')]
+    }
+
+    # Aggregate SHAP values
+    aggregated_shap_values = {}
+
+    # For numerical features, directly assign their SHAP values
+    numerical_features_list = ['lead_time', 'stays_in_weekend_nights', 'stays_in_week_nights',
+                               'adults', 'children', 'babies', 'adr',
+                               'previous_cancellations', 'previous_bookings_not_canceled']
+    for feature in numerical_features_list:
+        aggregated_shap_values[feature] = shap_values_dict.get(feature, 0)
+
+    # For categorical features, sum the SHAP values of their one-hot encoded columns
+    for feature, columns in categorical_features.items():
+        shap_sum = sum([shap_values_dict.get(col, 0) for col in columns])
+        aggregated_shap_values[feature] = shap_sum
+
+    # Optionally, filter out features with zero SHAP values
+    filtered_shap_values = {k: v for k, v in aggregated_shap_values.items() if v != 0}
+
+    return filtered_shap_values
 def predict(input_data: Dict[str, Any]) -> Dict[str, Any]:
     try:
+        # Store the original input data
+        original_input = input_data.copy()
+
+        logging.info("Starting data preprocessing.")
+        df = preprocess_input(input_data)
+        logging.info(f"Input data converted to DataFrame:\n{df}")
+
+        logging.info("Making prediction.")
+        prediction = bool(MODEL.predict(df)[0])
+        probabilities = MODEL.predict_proba(df)[0]
+
+        # Get class probabilities
+        cancel_probability = float(probabilities[1])
+        not_cancel_probability = float(probabilities[0])
+
+        # Get SHAP feature importance
+        feature_importance = get_shap_values(df, original_input)
+
+        # Prepare detailed response
+        result = {
+            "prediction": prediction,
+            "cancel_probability": cancel_probability,
+            "not_cancel_probability": not_cancel_probability,
+            "feature_importance": feature_importance,
+            "input_features": {
+                "numerical": {k: float(v) for k, v in original_input.items() if isinstance(v, (int, float))},
+                "categorical": {k: v for k, v in original_input.items() if isinstance(v, str)}
+            }
+        }
+
+        logging.info(f"Prediction result: {result}")
+        return result
+
+    except Exception as e:
+        logging.error(f"Prediction error: {e}")
+        return {"error": "Prediction error", "message": str(e)}
+    try:
+        # Store the original input data
+        original_input = input_data.copy()
         logging.info("Starting data preprocessing.")
         df = preprocess_input(input_data)
         logging.info(f"Input data converted to DataFrame:\n{df}")
@@ -84,7 +181,7 @@ def predict(input_data: Dict[str, Any]) -> Dict[str, Any]:
         not_cancel_probability = float(probabilities[0])
         
         # Get SHAP feature importance
-        shap_values_dict = get_shap_values(df)
+        shap_values_dict = get_shap_values(df, original_input)
         
         # Prepare detailed response
         result = {
@@ -93,8 +190,8 @@ def predict(input_data: Dict[str, Any]) -> Dict[str, Any]:
             "not_cancel_probability": not_cancel_probability,
             "feature_importance": shap_values_dict,
             "input_features": {
-                "numerical": {k: float(v) for k, v in input_data.items() if isinstance(v, (int, float))},
-                "categorical": {k: v for k, v in input_data.items() if isinstance(v, str)}
+                "numerical": {k: float(v) for k, v in original_input.items() if isinstance(v, (int, float))},
+                "categorical": {k: v for k, v in original_input.items() if isinstance(v, str)}
             }
         }
 
