@@ -133,7 +133,7 @@ export function BookingForm() {
     setIsLoading(true);
     try {
      const response = await axios.post<PredictionResponse>(`https://hotel-bookings-cancellation-predication.onrender.com/predict`, data);
-    //  const response = await axios.post<PredictionResponse>(`http://localhost:8080/predict`, data);
+  // const response = await axios.post<PredictionResponse>(`http://localhost:8080/predict`, data);
       if (response.data.status === 'success' && response.data.result) {
         // console.log(response);
         setPredictionResult(response.data.result);
